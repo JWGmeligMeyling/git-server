@@ -1,5 +1,9 @@
 package nl.tudelft.ewi.git.models;
 
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -11,7 +15,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode
 public class DiffModel {
-	
+
 	public enum Type {
 		/** Add a new file to the project */
 		ADD,
@@ -32,6 +36,29 @@ public class DiffModel {
 	private Type type;
 	private String oldPath;
 	private String newPath;
-	private String[] raw;
+	private List<DiffContext> diffContexts;
+
+	private int amountOfLinesWithType(final DiffLine.Type type) {
+		int amount = 0;
+		for(DiffContext context : diffContexts)
+			amount += context.amountOfLinesWithType(type);
+		return amount;
+	}
+
+	/**
+	 * @return the amount of added lines in this {@code DiffModel}
+	 */
+	@JsonIgnore
+	public int getLinesAdded() {
+		return amountOfLinesWithType(DiffLine.Type.ADDED);
+	}
+
+	/**
+	 * @return the amount of removed lines in this {@code DiffModel}
+	 */
+	@JsonIgnore
+	public int getLinesRemoved() {
+		return amountOfLinesWithType(DiffLine.Type.REMOVED);
+	}
 
 }
