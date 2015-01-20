@@ -1,6 +1,5 @@
 package nl.tudelft.ewi.git.inspector;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,7 +30,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.api.errors.NoHeadException;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffEntry.ChangeType;
-import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.diff.RawText;
 import org.eclipse.jgit.diff.RenameDetector;
 import org.eclipse.jgit.lib.ObjectId;
@@ -52,6 +50,7 @@ import org.eclipse.jgit.treewalk.TreeWalk;
 import org.eclipse.jgit.treewalk.filter.TreeFilter;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Collections2;
@@ -93,6 +92,7 @@ public class Inspector {
 	 *            The directory where all Git repositories are mirrored to (non-bare repositories).
 	 */
 	public Inspector(File repositoriesDirectory) {
+		Preconditions.checkNotNull(repositoriesDirectory);
 		log.info("Created Inspector in folder {}", repositoriesDirectory.getAbsolutePath());
 		this.repositoriesDirectory = repositoriesDirectory;
 	}
@@ -109,7 +109,10 @@ public class Inspector {
 	 * @throws GitException
 	 *             In case the Git repository could not be interacted with.
 	 */
-	public Collection<BranchModel> listBranches(Repository repository) throws IOException, GitException {
+	public Collection<BranchModel> listBranches(final Repository repository) throws IOException, GitException {
+
+		Preconditions.checkNotNull(repository);
+
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
 
@@ -146,6 +149,9 @@ public class Inspector {
 	 *             In case the Git repository could not be interacted with.
 	 */
 	public Collection<TagModel> listTags(Repository repository) throws IOException, GitException {
+
+		Preconditions.checkNotNull(repository);
+
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
 
@@ -206,6 +212,9 @@ public class Inspector {
 	 *             In case the Git repository could not be interacted with.
 	 */
 	public List<CommitModel> listCommits(Repository repository, int limit) throws IOException, GitException {
+
+		Preconditions.checkNotNull(repository);
+
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
 
@@ -258,6 +267,10 @@ public class Inspector {
 	 */
 	public BranchModel getBranch(Repository repository,
 			String branchName) throws GitException, IOException {
+
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(branchName);
+		
 		File repositoryDirectory = new File(repositoriesDirectory,
 				repository.getName());
 		Git git = Git.open(repositoryDirectory);
@@ -300,6 +313,10 @@ public class Inspector {
 	public List<CommitModel> listCommitsInBranch(Repository repository,
 			BranchModel branch) throws GitException,
 			IOException {
+
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(branch);
+
 		File repositoryDirectory = new File(repositoriesDirectory,
 				repository.getName());
 		Git git = Git.open(repositoryDirectory);
@@ -330,6 +347,10 @@ public class Inspector {
 	 */
 	public DetailedCommitModel retrieveCommit(Repository repository, String commitId)
 			throws GitException, IOException {
+		
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(commitId);
+		
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
 
@@ -373,6 +394,9 @@ public class Inspector {
 	 */
 	public Collection<DiffModel> calculateDiff(Repository repository, String leftCommitId, String rightCommitId)
 			throws IOException, GitException {
+		
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(rightCommitId);
 
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
@@ -386,10 +410,8 @@ public class Inspector {
 			if (!Strings.isNullOrEmpty(leftCommitId)) {
 				oldTreeIter = createTreeParser(git, leftCommitId);
 			}
-			AbstractTreeIterator newTreeIter = new EmptyTreeIterator();
-			if (!Strings.isNullOrEmpty(rightCommitId)) {
-				newTreeIter = createTreeParser(git, rightCommitId);
-			}
+			
+			AbstractTreeIterator newTreeIter = createTreeParser(git, rightCommitId);
 
 			List<DiffEntry> diffs = git.diff()
 				.setContextLines(3)
@@ -400,27 +422,23 @@ public class Inspector {
 			RenameDetector rd = new RenameDetector(repo);
 			rd.addAll(diffs);
 			diffs = rd.compute();
-
+			
 			return Collections2.transform(diffs, new Function<DiffEntry, DiffModel>() {
 				public DiffModel apply(DiffEntry input) {
-					ByteArrayOutputStream out = new ByteArrayOutputStream();
-					DiffFormatter formatter = new DiffFormatter(out);
-					formatter.setRepository(repo);
-
-					String contents = null;
-					try {
-						formatter.format(input);
-						contents = out.toString("UTF-8");
-					}
-					catch (IOException e) {
-						log.error(e.getMessage(), e);
-					}
-
 					DiffModel diff = new DiffModel();
 					diff.setType(convertChangeType(input.getChangeType()));
 					diff.setOldPath(input.getOldPath());
 					diff.setNewPath(input.getNewPath());
-					diff.setRaw(contents.split("\\r?\\n"));
+					
+					DiffContextFormatter formatter = new DiffContextFormatter(diff, repo);
+					
+					try {
+						formatter.format(input);
+					}
+					catch (IOException e) {
+						log.warn(e.getMessage(), e);
+					}
+					
 					return diff;
 				}
 
@@ -445,6 +463,9 @@ public class Inspector {
 		catch (GitAPIException e) {
 			throw new GitException(e);
 		}
+		finally {
+			repo.close();
+		}
 	}
 
 	/**
@@ -466,14 +487,18 @@ public class Inspector {
 	public Map<String, EntryType> showTree(Repository repository, String commitId, String path) throws IOException,
 			GitException {
 
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(commitId);
+		Preconditions.checkNotNull(path);
+
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
 		return showTree(git.getRepository(), commitId, path);
 	}
 
 	/**
-	 * This method returns an {@link InputStream} which will output the contents of the specified
-	 * file.
+	 * This method returns an {@link InputStream} which will output the contents
+	 * of the specified file.
 	 * 
 	 * @param repository
 	 *            The {@link Repository} to list all the current commits of.
@@ -481,17 +506,47 @@ public class Inspector {
 	 *            The commit ID of the state of the repository.
 	 * @param path
 	 *            The path of the file to inspect at the specified commit ID.
-	 * @return An {@link InputStream} which outputs the contents of the file. Or NULL if no file is
-	 *         present.
+	 * @return An {@link ObjectLoader} for accessing the object
 	 * @throws IOException
 	 *             In case the Git repository could not be accessed.
 	 * @throws GitException
 	 *             In case the Git repository could not be interacted with.
+	 * @throws NotFoundException
+	 *             In case the file could not be found in the commit
 	 */
-	public InputStream showFile(Repository repository, String commitId, String path) throws IOException, GitException {
+	public ObjectLoader showFile(final Repository repository,
+			final String commitId, final String path) throws IOException,
+			GitException {
+
+		Preconditions.checkNotNull(repository);
+		Preconditions.checkNotNull(commitId);
+		Preconditions.checkNotNull(path);
+		
 		File repositoryDirectory = new File(repositoriesDirectory, repository.getName());
 		Git git = Git.open(repositoryDirectory);
-		return showFile(git.getRepository(), commitId, path);
+		org.eclipse.jgit.lib.Repository repo = git.getRepository();
+		
+		RevWalk walk = new RevWalk(repo);
+		ObjectId resolvedObjectId = repo.resolve(commitId);
+		RevCommit commit = walk.parseCommit(resolvedObjectId);
+
+		TreeWalk walker = new TreeWalk(repo);
+		walker.setFilter(TreeFilter.ALL);
+		walker.addTree(commit.getTree());
+		walker.setRecursive(true);
+
+		while (walker.next()) {
+			String entryPath = walker.getPathString();
+			if (!entryPath.startsWith(path)) {
+				continue;
+			}
+
+			ObjectId objectId = walker.getObjectId(0);
+			ObjectLoader loader = repo.open(objectId);
+			return loader;
+		}
+
+		throw new NotFoundException("File " + path + " not found in commit " + commitId);
 	}
 
 	private Map<String, EntryType> showTree(org.eclipse.jgit.lib.Repository repo, String commitId, String path)
@@ -532,33 +587,11 @@ public class Inspector {
 		return handles;
 	}
 
-	private InputStream showFile(org.eclipse.jgit.lib.Repository repo, String commitId, String path)
-			throws GitException, IOException {
-
-		RevWalk walk = new RevWalk(repo);
-		ObjectId resolvedObjectId = repo.resolve(commitId);
-		RevCommit commit = walk.parseCommit(resolvedObjectId);
-
-		TreeWalk walker = new TreeWalk(repo);
-		walker.setFilter(TreeFilter.ALL);
-		walker.addTree(commit.getTree());
-		walker.setRecursive(true);
-
-		while (walker.next()) {
-			String entryPath = walker.getPathString();
-			if (!entryPath.startsWith(path)) {
-				continue;
-			}
-
-			ObjectId objectId = walker.getObjectId(0);
-			ObjectLoader loader = repo.open(objectId);
-			return loader.openStream();
-		}
-
-		return null;
-	}
-
 	private AbstractTreeIterator createTreeParser(Git git, String ref) throws IOException, GitAPIException {
+
+		assert git != null : "Git should not be null";
+		assert ref != null && !ref.isEmpty() : "Ref should not be empty or null";
+
 		org.eclipse.jgit.lib.Repository repo = git.getRepository();
 
 		RevWalk walk = new RevWalk(repo);
