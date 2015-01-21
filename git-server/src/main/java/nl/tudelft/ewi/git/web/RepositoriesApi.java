@@ -490,8 +490,7 @@ public class RepositoriesApi extends BaseApi {
 
 		Config config = manager.get();
 		Repository repository = fetchRepository(config, decode(repoId));
-		ObjectLoader loader = inspector.showFile(repository, decode(commitId),
-				decode(path));
+		ObjectLoader loader = inspector.showFile(repository, decode(commitId), decode(path));
 		String fileName = path.substring(path.lastIndexOf('/') + 1);
 
 		return Response.ok(loader, of(loader))
@@ -509,7 +508,7 @@ public class RepositoriesApi extends BaseApi {
 		}
 		return MediaType.APPLICATION_OCTET_STREAM_TYPE;
 	}
-
+	
 	private void pullCommitsFromRemoteRepository(String templateUrl, String repoUrl) throws GitException {
 		File dir = Files.createTempDir();
 
