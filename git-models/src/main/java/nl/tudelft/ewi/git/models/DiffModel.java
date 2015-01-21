@@ -61,4 +61,29 @@ public class DiffModel {
 		return amountOfLinesWithType(DiffLine.Type.REMOVED);
 	}
 
+	@JsonIgnore
+	public boolean isDeleted() {
+		return type.equals(DiffModel.Type.DELETE);
+	}
+
+	@JsonIgnore
+	public boolean isAdded() {
+		return type.equals(DiffModel.Type.ADD);
+	}
+
+	@JsonIgnore
+	public boolean isModified() {
+		return type.equals(DiffModel.Type.MODIFY);
+	}
+
+	@JsonIgnore
+	public boolean isCopied() {
+		return type.equals(DiffModel.Type.COPY);
+	}
+
+	@JsonIgnore
+	public boolean isMoved() {
+		return type.equals(DiffModel.Type.RENAME);
+	}
+	
 }
