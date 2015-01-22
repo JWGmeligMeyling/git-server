@@ -14,8 +14,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 	config.vm.synced_folder "~/.ssh", "/keys"
 	config.vm.synced_folder "puppet/files", "/vagrant/files"
 
-    config.vm.synced_folder "/etc/git-server/mirrors", "/home/git/mirrors",
-    	mount_options: ["dmode=777", "fmode=666"]
     config.vm.synced_folder "/etc/git-server/repositories", "/home/git/repositories",
     	mount_options: ["dmode=777", "fmode=666"]
 
