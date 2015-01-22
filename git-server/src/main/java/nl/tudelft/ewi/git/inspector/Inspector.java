@@ -20,6 +20,7 @@ import nl.tudelft.ewi.git.models.CommitModel;
 import nl.tudelft.ewi.git.models.DetailedBranchModel;
 import nl.tudelft.ewi.git.models.DetailedCommitModel;
 import nl.tudelft.ewi.git.models.DiffModel;
+import nl.tudelft.ewi.git.models.Transformers;
 import nl.tudelft.ewi.git.models.DiffModel.Type;
 import nl.tudelft.ewi.git.models.EntryType;
 import nl.tudelft.ewi.git.models.TagModel;
@@ -114,7 +115,7 @@ public class Inspector {
 
 		try {
 			List<Ref> results = git.branchList()
-				.setListMode(ListMode.REMOTE)
+				.setListMode(ListMode.ALL)
 				.call();
 
 			return Collections2.transform(Collections2.filter(results, new Predicate<Ref>() {
@@ -125,18 +126,7 @@ public class Inspector {
 					return !input.getName().equals("refs/remotes/origin/HEAD");
 				}
 				
-			}), new Function<Ref, BranchModel>() {
-				@Override
-				public BranchModel apply(Ref input) {
-					String name = input.getName();
-					ObjectId objectId = input.getObjectId();
-
-					BranchModel branch = new BranchModel();
-					branch.setCommit(objectId.getName());
-					branch.setName(name);
-					return branch;
-				}
-			});
+			}), Transformers.branchModel(repository));
 		}
 		catch (GitAPIException e) {
 			throw new GitException(e);
@@ -273,16 +263,13 @@ public class Inspector {
 		Git git = Git.open(repositoryDirectory);
 
 		try {
-			List<Ref> results = git.branchList().setListMode(ListMode.REMOTE)
+			List<Ref> results = git.branchList()
+					.setListMode(ListMode.ALL)
 					.call();
 
 			for (Ref ref : results) {
 				if (ref.getName().contains(branchName)) {
-					ObjectId objectId = ref.getObjectId();
-					BranchModel branch = new BranchModel();
-					branch.setCommit(objectId.getName());
-					branch.setName(branchName);
-					return branch;
+					return Transformers.branchModel(repository).apply(ref);
 				}
 			}
 
@@ -325,34 +312,7 @@ public class Inspector {
 					.call();
 
 			return Lists.transform(Lists.newArrayList(revCommits),
-					new Function<RevCommit, CommitModel>() {
-
-						@Override
-						public CommitModel apply(RevCommit revCommit) {
-							RevCommit[] parents = revCommit.getParents();
-							String[] parentIds = new String[parents.length];
-							for (int i = 0; i < parents.length; i++) {
-								ObjectId parentId = parents[i].getId();
-								parentIds[i] = parentId.getName();
-							}
-
-							PersonIdent committerIdent = revCommit
-									.getCommitterIdent();
-							ObjectId revCommitId = revCommit.getId();
-
-							CommitModel commit = new CommitModel();
-							commit.setCommit(revCommitId.getName());
-							commit.setParents(parentIds);
-							commit.setTime(revCommit.getCommitTime());
-							commit.setAuthor(committerIdent.getName(),
-									committerIdent.getEmailAddress());
-							commit.setMessage(revCommit.getShortMessage());
-
-							return commit;
-						}
-
-					});
-
+					Transformers.commitModel(repository));
 		} catch (GitAPIException e) {
 			throw new GitException(e);
 		}
@@ -381,25 +341,8 @@ public class Inspector {
 
 			Iterator<RevCommit> iterator = revCommits.iterator();
 			RevCommit revCommit = iterator.next();
-			RevCommit[] parents = revCommit.getParents();
-			String[] parentIds = new String[parents.length];
-			for (int i = 0; i < parents.length; i++) {
-				ObjectId parentId = parents[i].getId();
-				parentIds[i] = parentId.getName();
-			}
-
-			PersonIdent committerIdent = revCommit.getCommitterIdent();
-			ObjectId revCommitId = revCommit.getId();
-
-			DetailedCommitModel commit = new DetailedCommitModel();
-			commit.setCommit(revCommitId.getName());
-			commit.setParents(parentIds);
-			commit.setTime(revCommit.getCommitTime());
-			commit.setAuthor(committerIdent.getName(), committerIdent.getEmailAddress());
-			commit.setMessage(revCommit.getShortMessage());
-			commit.setFullMessage(revCommit.getFullMessage());
-
-			return commit;
+			
+			return Transformers.detailedCommitModel(repository).apply(revCommit);
 		}
 		catch (GitAPIException e) {
 			throw new GitException(e);
