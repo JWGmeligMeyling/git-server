@@ -267,10 +267,6 @@ public class RepositoriesApi extends BaseApi {
 			delete(topDirectory, new File(topDirectory, decode(repoId)));
 		}
 		
-		if (!Strings.isNullOrEmpty(configuration.getMirrorsDirectory())) {
-			File topDirectory = new File(configuration.getMirrorsDirectory());
-			delete(topDirectory, new File(topDirectory, decode(repoId)));
-		}
 	}
 
 	/**
