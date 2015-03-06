@@ -316,9 +316,7 @@ public class Inspector {
 	 * 
 	 * @param repository The {@link Repository} to list a limited amount of
 	 *           commits of.
-	 * @param branchName The branch to start traversal at
-	 * @param skip Amount of commits to skip
-	 * @param limit The maximum amount of {@link CommitModel} objects to return.
+	 * @param branch The branch to start traversal at
 	 * @return A {@link Collections} of {@link CommitModel} objects, each
 	 *         representing one commit in the specified Git repository. The
 	 *         {@link CommitModel} objects are ordered from newest to oldest. At
@@ -432,10 +430,10 @@ public class Inspector {
 			AbstractTreeIterator newTreeIter = createTreeParser(git, rightCommitId);
 
 			List<DiffEntry> diffs = git.diff()
-				.setContextLines(contextLines)
-				.setOldTree(oldTreeIter)
-				.setNewTree(newTreeIter)
-				.call();
+                    .setContextLines(contextLines)
+                    .setOldTree(oldTreeIter)
+                    .setNewTree(newTreeIter)
+                    .call();
 			
 			RenameDetector rd = new RenameDetector(repo);
 			rd.addAll(diffs);
@@ -680,8 +678,7 @@ public class Inspector {
 	}
 	
 	private List<RevCommit> commitDifference(Git git, String startRef, String endRef)
-			throws RevisionSyntaxException, MissingObjectException,
-			IncorrectObjectTypeException, AmbiguousObjectException, IOException {
+			throws RevisionSyntaxException, IOException {
 		
 		assert git != null : "Git should not be null";
 		assert startRef != null && !startRef.isEmpty() : "Ref should not be empty or null";
