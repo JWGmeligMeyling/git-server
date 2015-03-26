@@ -59,3 +59,4 @@ git-models/target/
 git-server/target/
 .idea
 *.iml
+.DS_Store
