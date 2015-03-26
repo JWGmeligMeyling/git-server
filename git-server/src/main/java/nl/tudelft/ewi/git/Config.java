@@ -45,6 +45,10 @@ public class Config {
 		return properties.getProperty("gitolite.repositories");
 	}
 
+	public String getMirrorsDirectory() {
+		return properties.getProperty("gitolite.mirrors");
+	}
+
 	public String getGitoliteAdmin() {
 		return properties.getProperty("gitolite.admin.user", "git");
 	}
