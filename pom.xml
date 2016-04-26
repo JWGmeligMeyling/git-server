@@ -20,6 +20,8 @@
 		<lombok.version>1.16.6</lombok.version>
 		<guava.version>19.0</guava.version>
 		<jacoco.version>0.7.5.201505241946</jacoco.version>
+		<pmd.plugin.version>3.6</pmd.plugin.version>
+		<findbugs.plugin.version>3.0.3</findbugs.plugin.version>
 	</properties>
 
 	<description>The Devhub Git-server is a REST API over the Git API and can be used for Gitolite server administration</description>
@@ -152,6 +154,29 @@
 						<version>1.9.4</version>
 					</dependency>
 				</dependencies>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>findbugs-maven-plugin</artifactId>
+				<version>${findbugs.plugin.version}</version>
+				<configuration>
+					<failOnError>true</failOnError>
+					<includeTests>true</includeTests>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<version>${pmd.plugin.version}</version>
+				<configuration>
+					<aggregate>true</aggregate>
+					<failOnViolation>true</failOnViolation>
+					<skipEmptyReport>false</skipEmptyReport>
+					<includeTests>true</includeTests>
+					<rulesets>
+						<ruleset>pmd-rules.xml</ruleset>
+					</rulesets>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
